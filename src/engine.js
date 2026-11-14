@@ -9,7 +9,8 @@
  *    durakdan oldingi oʻyinchi durakka yuradi.
  *  - Hujumchi chap tomondagi (keyingi) oʻyinchiga yuradi: 1 ta karta yoki bir xil qiymatdagi bir nechta karta.
  *  - Himoyachi har bir kartani urishi kerak: oʻsha mastning kattarogʻi yoki koʻzir bilan (koʻzirni faqat kattaroq koʻzir uradi).
- *  - Himoyachidan boshqa hamma stoldagi kartalar (hujum va himoya) bilan bir xil qiymatdagi karta tashlay oladi ("podkidnoy").
+ *  - Faqat himoyachining ikki yonidagi oʻyinchilar (asosiy hujumchi va himoyachidan keyingi oʻyinchi) stoldagi kartalar
+ *    (hujum va himoya) bilan bir xil qiymatdagi karta tashlay oladi ("podkidnoy"). Boshqalar tashlamaydi.
  *    Bir yurishda 6 tadan (va himoyachida yurish boshida boʻlgan kartalardan) koʻp tashlab boʻlmaydi;
  *    urilmagan kartalar himoyachi qoʻlidagi kartalardan koʻp boʻlmaydi.
  *  - Himoyachi ura olmasa yoki xohlamasa — "Olaman": qolganlar yana tashlashi mumkin, keyin u stoldagi hamma kartalarni oladi
@@ -98,14 +99,22 @@
     for (let k = 1; k <= st.n; k++) { const j = (s - k + st.n * 2) % st.n; if (active(st, j)) return j; }
     return s;
   }
-  // Hujum qila oladiganlar: himoyachidan boshqa, oʻyindagi oʻyinchilar — asosiy hujumchidan boshlab
+  // Hujum qila oladiganlar: faqat himoyachining ikki qoʻshnisi — asosiy hujumchi (himoyachidan oldingi)
+  // va himoyachidan keyingi oʻyinchi. Ikki kishi qolganda — faqat hujumchi.
   function attackers(st) {
+    const o = [st.attacker];
+    const right = nextActive(st, st.defender);
+    if (right !== st.attacker && right !== st.defender) o.push(right);
+    return o;
+  }
+  // Karta olish tartibi: asosiy hujumchidan boshlab soat yoʻnalishida hamma, himoyachi eng oxirida
+  function drawOrder(st) {
     const o = [];
     for (let k = 0; k < st.n; k++) {
       const s = (st.attacker + k) % st.n;
       if (s !== st.defender && active(st, s)) o.push(s);
     }
-    return o;
+    return o.concat([st.defender]);
   }
 
   // ---------- holat ----------
@@ -196,6 +205,7 @@
   // seat tashlay oladigan kartalar
   function throwable(st, seat) {
     if (seat === st.defender || !active(st, seat)) return [];
+    if (attackers(st).indexOf(seat) < 0) return [];
     if (st.phase !== 'defend' && st.phase !== 'throw') return [];
     if (room(st) <= 0) return [];
     const rs = tableRanks(st);
@@ -254,6 +264,7 @@
           st.phase = 'defend';
           ev(st, 'attack', seat, { cards: cards.slice() });
         } else if (st.phase === 'defend' || st.phase === 'throw') {
+          if (attackers(st).indexOf(seat) < 0) return fail('Faqat himoyachining yonidagi oʻyinchilar tashlay oladi');
           const rs = tableRanks(st);
           if (!cards.every(function (c) { return rs.has(rankOf(c)); })) return fail('Stolda shu qiymatdagi karta yoʻq');
           if (cards.length > room(st)) return fail(room(st) ? 'Faqat ' + room(st) + ' ta karta tashlash mumkin' : 'Boshqa karta tashlab boʻlmaydi');
@@ -297,6 +308,7 @@
       case 'pass': {
         if (seat === st.defender) return fail('Siz himoyalanyapsiz');
         if (st.phase !== 'throw' && st.phase !== 'defend') return fail('Hozir kerak emas');
+        if (attackers(st).indexOf(seat) < 0) return fail('Siz bu yurishda tashlamaysiz');
         if (st.passed[seat]) return okv(st);
         st.passed[seat] = true;
         ev(st, 'pass', seat, { taking: st.taking || undefined });
@@ -311,7 +323,7 @@
   function collect(st) {
     if (st.phase !== 'boutEnd') return [];
     const d = st.defender, took = st.taking;
-    const order = attackers(st).concat([d]);
+    const order = drawOrder(st);
     if (took) {
       for (const x of st.table) { st.hands[d].push(x.a); if (x.d) st.hands[d].push(x.d); }
     } else {
@@ -369,7 +381,7 @@
       return c ? { type: 'attack', cards: [c] } : null;
     }
     if (st.phase === 'defend' && seat === st.defender && !st.taking) return { type: 'take' };
-    if ((st.phase === 'throw' || st.phase === 'defend') && seat !== st.defender && active(st, seat)) return { type: 'pass' };
+    if ((st.phase === 'throw' || st.phase === 'defend') && attackers(st).indexOf(seat) >= 0) return { type: 'pass' };
     return null;
   }
 
@@ -393,6 +405,7 @@
       boutNo: st.boutNo,
       table: st.table.map(function (x) { return { a: x.a, d: x.d, by: x.by }; }),
       passed: st.passed.slice(),
+      throwers: (st.phase === 'defend' || st.phase === 'throw' || st.phase === 'attack') ? attackers(st) : [],
       out: st.out.slice(),
       places: st.places.slice(),
       hand: mine ? st.hands[me].slice() : null,
@@ -463,7 +476,7 @@
     if (!active(st, me)) return null;
     if (st.phase === 'attack' && me === st.attacker) return aiAttack(st, me);
     if (st.phase === 'defend' && me === st.defender && !st.taking) return aiDefend(st, me);
-    if ((st.phase === 'throw' || st.phase === 'defend') && me !== st.defender) return aiThrow(st, me);
+    if ((st.phase === 'throw' || st.phase === 'defend') && attackers(st).indexOf(me) >= 0) return aiThrow(st, me);
     return null;
   }
 
@@ -473,7 +486,7 @@
     beats: beats, clampN: clampN, sortHand: sortHand,
     newRound: newRound, act: act, collect: collect, takeEvents: takeEvents,
     viewFor: viewFor, resultView: resultView, autoMove: autoMove,
-    throwable: throwable, room: room, attackers: attackers, unbeaten: unbeaten,
+    throwable: throwable, room: room, attackers: attackers, drawOrder: drawOrder, unbeaten: unbeaten, cost: cost,
     AI: { choose: aiChoose }
   };
 });

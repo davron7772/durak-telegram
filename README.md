@@ -9,7 +9,7 @@ Guruhda `/durak` deb yoziladi. Bot oʻyin zalini ochadi. Stol ochishda oʻyinchi
 - 36 ta karta, har kimga 6 tadan. Keyingi karta ochilib koloda tagiga qoʻyiladi — uning masti koʻzir.
 - Birinchi oʻyinda eng kichik koʻziri bor oʻyinchi yuradi. Keyingi oʻyinlarda **durakning tagidan** yuriladi.
 - Hujum: 1 ta karta yoki bir xil qiymatdagi bir nechta karta. Himoya: oʻsha mastning kattarogʻi yoki koʻzir.
-- Himoyachidan boshqa hamma bir xil qiymatdagi kartani **tashlay oladi**: bir yurishda 6 tadan koʻp emas va himoyachining kartalaridan koʻp emas.
+- Faqat **himoyachining ikki yonidagi** oʻyinchilar (hujumchi va himoyachidan keyingi oʻyinchi) bir xil qiymatdagi kartani **tashlay oladi**: bir yurishda 6 tadan koʻp emas va himoyachining kartalaridan koʻp emas.
 - **Olaman** — himoyachi hamma kartalarni oladi va navbatini oʻtkazib yuboradi. **Bito** — kartalar chiqib ketadi, himoyachi yuradi.
 - Koloda tugagach kartasi qolmaganlar chiqadi. Oxirgi qolgan — **durak**. Hisob: kim necha marta durak boʻlgani.
 - Vaqt tugasa: himoyachi oladi, hujumchi eng kichik kartasi bilan yuradi, tashlovchi — bito.
@@ -22,6 +22,14 @@ Guruhda `/durak` deb yoziladi. Bot oʻyin zalini ochadi. Stol ochishda oʻyinchi
 - **Server** — kartalar serverda saqlanadi, hech kim boshqaning kartasini koʻrmaydi.
 - **Botlar** — odam yetmasa boʻsh oʻringa bot qoʻyiladi; chiqib ketgan oʻyinchi oʻrniga bot oʻynaydi.
 - **Ovozli chat** va **UZ/RU** tillari — Bura'dagidek.
+- **Oʻyinchilar samaradorligi (reyting)** — har bir yurish tahlil qilinadi: samaradorlik = toʻgʻri yurishlar (50%) + durak boʻlmaslik (25%) + chiqish oʻrni (25%). Reytingga kirish uchun kamida 3 ta oʻyin. Botlar hisoblanmaydi.
+- **3D koʻrinish** — hajmli stol, qiya movut, yelpigʻich qoʻl. Menyuda 2D/3D tanlovi (har bir telefonda alohida saqlanadi).
+- **Narsalar** — oʻz avataringizni bosib, oldingizga viski, sigara, tort yoki pivo qoʻyasiz; stoldagilarning hammasi koʻradi.
+- **Oflayn oʻyinchi** — 30 soniyadan ortiq oflayn qolsa, oʻrni boʻshaydi; qaytsa — mehmon boʻladi.
+
+### Statistikani saqlash (Yandex Disk)
+
+Reyting `DATA_DIR` papkasidagi `stats.json` faylida (yoʻq boʻlsa `./data`) saqlanadi. Render'da server qayta ishga tushganda fayl yoʻqolmasligi uchun Yandex Disk ulanadi: Render → Environment → `YANDEX_DISK_TOKEN` (OAuth token, «cloud_api:disk.app_folder» ruxsati). Fayl nomi — `durak-stats.json`, Bura statistikasi bilan aralashmaydi; bitta tokenni ikkala botda ishlatish mumkin.
 
 ## 1-qadam. Bot yaratish
 
@@ -84,6 +92,6 @@ Faylni brauzerda oching — 3 ta botga qarshi oʻynaysiz.
 
 ```bash
 npm install
-npm test                       # 52 ta test
+npm test                       # 62 ta test
 DEV_MODE=1 npm start           # http://localhost:3000/?dev=1&uid=1&name=Ali
 ```

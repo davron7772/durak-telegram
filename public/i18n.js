@@ -17,6 +17,11 @@
 
   // Oʻzgaruvchan matnlar (raqam bilan) — avval shular
   const RULES = [
+    [/(\d+) oʻyin · toʻgʻri yurish (\d+)% · durak (\d+)% · birinchi chiqish (\d+)%/g, (m, a, b, c, d) => a + ' ' + pl(a, 'партия', 'партии', 'партий') + ' · верные ходы ' + b + '% · дурак ' + c + '% · вышел первым ' + d + '%'],
+    [/Reytingga kirish uchun kamida (\d+) oʻyin oʻynang/g, (m, n) => 'Чтобы попасть в рейтинг, сыграйте минимум ' + n + ' ' + pl(n, 'партию', 'партии', 'партий')],
+    [/«—» — hali (\d+) oʻyindan kam oʻynagan\. Botlar hisoblanmaydi\./g, (m, n) => '«—» — сыграно меньше ' + n + ' партий. Боты не учитываются.'],
+    [/Bu yurishda faqat (.+)ning yonidagilar tashlaydi/g, (m, n) => 'В этом ходе подкидывают только соседи игрока ' + n],
+    [/Tayyorlik · (\d)\/(\d)/g, (m, n, k) => 'Готовность · ' + n + '/' + k],
     [/(\d+) marta durak boʻldingiz/g, (m, n) => n + ' ' + pl(n, 'раз', 'раза', 'раз') + ' были дураком'],
     [/(\d+) marta durak/g, (m, n) => n + ' ' + pl(n, 'раз', 'раза', 'раз') + ' дурак'],
     [/(\d+)-oʻyin ketmoqda/g, (m, n) => 'Партия ' + n + ' идёт'],
@@ -69,6 +74,27 @@
   // Doimiy matnlar va boʻlaklar
   const D = {
     // ---- Durak ----
+    'Oʻyinchilar samaradorligi': 'Эффективность игроков',
+    'Hamma oʻyinchilarning oʻyin tahlili': 'Разбор игры всех игроков',
+    'Har bir yurish tahlil qilinadi. Samaradorlik = toʻgʻri yurishlar (50%) + durak boʻlmaslik (25%) + chiqish oʻrni (25%).': 'Каждый ход анализируется. Эффективность = верные ходы (50%) + не остаться дураком (25%) + место выхода (25%).',
+    'Sizning samaradorligingiz': 'Ваша эффективность',
+    'Hali statistika yoʻq — bir necha oʻyin oʻynang.': 'Статистики пока нет — сыграйте несколько партий.',
+    'Yuklanmoqda…': 'Загрузка…',
+    'Orqaga': 'Назад',
+    '(siz)': '(вы)',
+    'Oldingizga nima qoʻyasiz?': 'Что поставить перед собой?',
+    'Stoldagilarning hammasi koʻradi.': 'Это увидят все за столом.',
+    'Viski': 'Виски',
+    'Sigara': 'Сигара',
+    'Tort': 'Торт',
+    'Pivo': 'Пиво',
+    'Olib qoʻyish': 'Убрать',
+    'Koʻrinish': 'Вид',
+    'tekis': 'плоский',
+    'hajmli stol': 'объёмный стол',
+    'tashlaydi': 'подкидывает',
+    'Faqat himoyachining yonidagi oʻyinchilar tashlay oladi': 'Подкидывать могут только соседи отбивающегося',
+    'Siz bu yurishda tashlamaysiz': 'В этом ходе вы не подкидываете',
     '2–6 kishi. Kim durak qoladi?': '2–6 игроков. Кто останется дураком?',
     'Kim durak qoladi?': 'Кто останется дураком?',
     'kishi': 'игроков',

@@ -159,3 +159,45 @@ test('keyingi oʻyin durakning tagidan', () => {
   assert.strictEqual(st.attacker, 1);
   assert.strictEqual(st.defender, 2);
 });
+
+test('faqat himoyachining ikki qoʻshnisi tashlay oladi', () => {
+  // 5 kishi: 0 hujum, 1 himoya; tashlay oladiganlar — 0 va 2; 3 va 4 — yoʻq
+  const hands = [
+    ['6H', 'AC', 'KC', 'QC', 'JC', '10C'],
+    ['AH', 'AD', 'KD', 'QD', 'JD', '10D'],
+    ['6C', '9C', '8C', '7C', '9D', '8D'],
+    ['6D', '7D', '9H', '8H', '7H', 'KH'],
+    ['6S', '7S', '8S', '9S', '10S', 'JS']
+  ];
+  const st = E.newRound({ n: 5, deck: deckFor(5, hands, [], 'QH'), first: 0 });
+  E.takeEvents(st);
+  // 6S — eng kichik koʻzirmi? Koʻzir — chervi (QH): eng kichigi 6H — 0-oʻrinda
+  assert.strictEqual(st.attacker, 0);
+  assert.strictEqual(st.defender, 1);
+  assert.deepStrictEqual(E.attackers(st), [0, 2]);
+  assert.ok(E.act(st, 0, { type: 'attack', cards: ['6H'] }).ok);
+  let r = E.act(st, 3, { type: 'attack', cards: ['6D'] });
+  assert.ok(!r.ok, '3-oʻrin qoʻshni emas');
+  assert.match(r.error, /yonidagi/);
+  r = E.act(st, 4, { type: 'attack', cards: ['6S'] });
+  assert.ok(!r.ok, '4-oʻrin qoʻshni emas');
+  r = E.act(st, 2, { type: 'attack', cards: ['6C'] });
+  assert.ok(r.ok, '2-oʻrin — himoyachidan keyingi, tashlay oladi');
+  assert.ok(!E.act(st, 3, { type: 'pass' }).ok);
+  const v = E.viewFor(st, 3);
+  assert.deepStrictEqual(v.throwers, [0, 2]);
+});
+
+test('karta olish: hamma (qoʻshni boʻlmaganlar ham) 6 tagacha oladi', () => {
+  const st = E.newRound({ n: 5, first: 0 });
+  E.takeEvents(st);
+  // 4-oʻrin bir kartani yoʻqotgandek: qoʻlidan bitta karta chiqaramiz
+  const lost = st.hands[4].pop(); st.discarded++;
+  const a = E.autoMove(st, st.attacker);
+  assert.ok(E.act(st, st.attacker, a).ok);
+  assert.ok(E.act(st, st.defender, { type: 'take' }).ok);
+  for (const s of E.attackers(st)) if (st.phase !== 'boutEnd') E.act(st, s, { type: 'pass' });
+  assert.strictEqual(st.phase, 'boutEnd');
+  E.collect(st);
+  assert.strictEqual(st.hands[4].length, 6, lost + ' oʻrniga karta olindi');
+});

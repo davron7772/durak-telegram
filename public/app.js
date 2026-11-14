@@ -27,6 +27,15 @@
     applySkin();
   }
   applySkin();
+  // Koʻrinish: 3D (hajmli stol) yoki 2D (tekis) — har bir qurilmada alohida
+  let VIEW = (function () { try { return localStorage.getItem('durak.view') === '2d' ? '2d' : '3d'; } catch (e) { return '3d'; } })();
+  function applyView() { document.documentElement.classList.toggle('v3d', VIEW === '3d'); }
+  function setView(v) {
+    VIEW = v === '2d' ? '2d' : '3d';
+    try { localStorage.setItem('durak.view', VIEW); } catch (e) { /* */ }
+    applyView();
+  }
+  applyView();
   const TGW = window.Telegram && window.Telegram.WebApp;
   const TG = TGW && TGW.initData ? TGW : null;
   const qs = new URLSearchParams(location.search);
@@ -40,6 +49,8 @@
   const SUIT_NAME = { S: 'pika', H: 'chervi', D: 'bubna', C: 'tref' };
   const SUIT_CHAR = { S: '♠\uFE0E', H: '♥\uFE0E', D: '♦\uFE0E', C: '♣\uFE0E' };
   const AVATAR_BG = ['#2a2f57', '#7a2a31', '#1f4a4f', '#5b4223', '#3d2a57', '#24503a'];
+  // 3D stol (yogʻoch hoshiya, tilla chiziq, movut) — faqat 3D koʻrinishda chiqadi
+  const T3D = '<div class="t3d" aria-hidden="true"><div class="t3-in"><i class="t3-thick"></i><i class="t3-rim"></i><i class="t3-felt"><b>DURAK</b></i></div></div>';
   const GUL = '<svg class="gul" viewBox="0 0 240 150" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2">' +
     '<path d="M84 8h72l52 34v66l-52 34H84L32 108V42z"/><path d="M92 24h56l38 24v54l-38 24H92L54 102V48z"/>' +
     '<path d="M120 38l30 37-30 37-30-37z"/><path d="M120 58l14 17-14 17-14-17z" fill="currentColor"/>' +
@@ -212,6 +223,10 @@
       }
       setRoom(m.room, m.invite);
     }
+    else if (m.t === 'stats') {
+      S.stats = { list: m.list || [], me: m.me || null, min: m.min || 3 };
+      if (S.sheet && S.sheet.type === 'stats') render();
+    }
     else if (m.t === 'hall') {
       S.hall = m.hall; S.busy = false;
       // out — stoldan chiqib zalga oʻtdik; aks holda stol (lobbi) ichidamiz va zal shunchaki yangilandi
@@ -354,12 +369,41 @@
   }
   function linkBtn(act, label) { return '<button type="button" class="link" data-act="' + act + '">' + label + '</button>'; }
 
-  function avatarHTML(seat, s, active) {
+  function avatarHTML(seat, s, active, plus) {
     const voice = VC && seat && !seat.bot;
-    return '<div class="ava" style="--av:' + AVATAR_BG[s % AVATAR_BG.length] + '"' + (voice ? ' data-vs="' + s + '"' : '') + '><span>' + esc(firstLetter(seat && seat.name)) + '</span>' +
+    const it = seat && seat.item && ITEMS[seat.item] ? seat.item : null;
+    return '<div class="ava' + (it ? ' hasitm' : '') + '" style="--av:' + AVATAR_BG[s % AVATAR_BG.length] + '"' + (voice ? ' data-vs="' + s + '"' : '') + '><span>' + esc(firstLetter(seat && seat.name)) + '</span>' +
       (seat && seat.photo ? '<img src="' + esc(seat.photo) + '" alt="" referrerpolicy="no-referrer">' : '') +
-      (active ? '<i class="ring"></i>' : '') + (voice ? VBADGE : '') + '</div>';
+      (active ? '<i class="ring"></i>' : '') + (voice ? VBADGE : '') +
+      (plus ? '<i class="plus" aria-hidden="true">+</i>' : '') +
+      (it ? '<i class="itm itm-' + it + '" title="' + ITEMS[it].name + '">' + ITEMS[it].svg + '</i>' : '') + '</div>';
   }
+
+  // Oʻyinchi oʻz oldiga qoʻyadigan narsalar (poker stolidagidek)
+  const ITEMS = {
+    whisky: { name: 'Viski', svg: '<svg viewBox="0 0 48 48"><ellipse cx="24" cy="43" rx="16" ry="3.6" fill="url(#g-shadow)"/> <path d="M9 12.5 L11.6 39 Q12 42 15 42 H33 Q36 42 36.4 39 L39 12.5 Z" fill="url(#g-glass)" stroke="#eef6ff" stroke-opacity=".8" stroke-width=".8"/> <path d="M10.6 24 L12.3 38.4 Q12.7 40.6 15.2 40.6 H32.8 Q35.3 40.6 35.7 38.4 L37.4 24 Z" fill="url(#g-whisky)" opacity=".95"/> <ellipse cx="24" cy="24" rx="13.4" ry="3" fill="url(#g-wtop)"/> <g><path d="M14 16.5 l7 -2 l2.6 6.4 l-7 2.2z" fill="url(#g-ice)" stroke="#fff" stroke-opacity=".7" stroke-width=".6"/><path d="M14 16.5 l2.6 6.6 l-1.6 1.4 l-2.4 -6.4z" fill="#b9d6ee" opacity=".7"/> <path d="M24.5 15.5 l6.4 1.4 l-1.2 6.6 l-6.6 -1.4z" fill="url(#g-ice)" stroke="#fff" stroke-opacity=".7" stroke-width=".6"/><path d="M23.1 22.1 l6.6 1.4 l-.4 2 l-6.6 -1.6z" fill="#b9d6ee" opacity=".6"/></g> <path d="M12.3 37.6 Q24 42 35.7 37.6 L35.4 39.6 Q24 44 12.6 39.6Z" fill="#fff" opacity=".35"/> <ellipse cx="24" cy="12.5" rx="15" ry="3.2" fill="none" stroke="#fff" stroke-opacity=".9" stroke-width="1.1"/> <path d="M12.2 15 L14 36" stroke="#fff" stroke-opacity=".85" stroke-width="1.6" stroke-linecap="round"/><path d="M15.4 15.6 L16.6 30" stroke="#fff" stroke-opacity=".4" stroke-width=".9" stroke-linecap="round"/></svg>' },
+    cigar: { name: 'Sigara', svg: '<svg viewBox="0 0 48 48"><g class="smoke" fill="none" stroke="#e8e4dc" stroke-linecap="round"><path d="M40 20 c-3 -3 3 -5 0 -8 s3 -5 0 -8" stroke-width="1.8" opacity=".75"/><path d="M43.5 19 c-2 -2.5 2 -4 0 -6.5" stroke-width="1.3" opacity=".5"/></g> <ellipse cx="22" cy="37" rx="19" ry="3.4" fill="url(#g-shadow)"/> <g transform="rotate(-18 22 28)"><rect x="2" y="23.5" width="36" height="9" rx="4.5" fill="url(#g-cigar)"/> <path d="M4 25.2 h32" stroke="#e8b88a" stroke-opacity=".55" stroke-width="1.1" stroke-linecap="round"/> <path d="M9 23.6 q1 4.5 0 8.8 M15 23.6 q1 4.5 0 8.8 M27 23.6 q1 4.5 0 8.8" stroke="#3a1d0c" stroke-opacity=".35" stroke-width=".7" fill="none"/> <rect x="17.5" y="23.3" width="6.5" height="9.4" fill="url(#g-band)"/><rect x="19.2" y="23.3" width="3" height="9.4" fill="#b8122a"/><circle cx="20.7" cy="28" r="1.3" fill="#ffe08a"/> <rect x="36.4" y="23.5" width="3.2" height="9" rx="1.4" fill="#9a9590"/><ellipse cx="39.8" cy="28" rx="1.7" ry="4.3" fill="url(#g-ember)"/></g> <circle cx="40.8" cy="21.5" r="4" fill="#ff7a2c" opacity=".25"/></svg>' },
+    cake: { name: 'Tort', svg: '<svg viewBox="0 0 48 48"><ellipse cx="24" cy="40.5" rx="21" ry="5.6" fill="url(#g-plate)" stroke="#aeb7c8" stroke-width=".6"/><ellipse cx="24" cy="40" rx="16" ry="3.8" fill="none" stroke="#e6ebf3" stroke-width="1"/> <path d="M7 22 L33 15 L41 21 L41 36 L15 41 L7 36 Z" fill="none"/> <path d="M15 26 L41 21 L41 35.5 L15 40.5 Z" fill="url(#g-sponge)"/> <path d="M7 21.5 L15 26 L15 40.5 L7 36 Z" fill="url(#g-side)"/> <path d="M15 31 L41 26.2 L41 28.8 L15 33.6 Z" fill="url(#g-cream)"/><path d="M7 26.6 L15 31 L15 33.6 L7 29.2 Z" fill="#d9c4a4"/> <path d="M7 21.5 L33 15.5 L41 21 L15 26 Z" fill="url(#g-cream)"/> <path d="M15 26 c1.6 2 3.2 2 4.8 .2 s3.2 -2 4.8 -.2 3.2 2 4.8 .2 3.2 -2 4.8 -.2 3.2 1.8 4.8 -.2" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/> <path d="M7 21.5 c1.2 1.6 2.6 2.4 4 2.2 s2.6 1 4 2.3" fill="none" stroke="#f3e7d2" stroke-width="2" stroke-linecap="round"/> <path d="M26 17.5 c.6 -3 2.6 -5.2 5.4 -6" stroke="#3f6e22" stroke-width="1.2" fill="none" stroke-linecap="round"/> <ellipse cx="25.4" cy="18.8" rx="3.6" ry="1.2" fill="#000" opacity=".2"/><circle cx="25.4" cy="16.4" r="3.6" fill="url(#g-cherry)"/><ellipse cx="24.3" cy="15.2" rx="1.1" ry=".8" fill="#fff" opacity=".85"/></svg>' },
+    beer: { name: 'Pivo', svg: '<svg viewBox="0 0 48 48"><ellipse cx="24" cy="44" rx="10" ry="2.6" fill="url(#g-shadow)"/> <path d="M20 9 h8 v4.5 c0 3 5 5.5 5 11.5 v16 q0 3 -3 3 h-12 q-3 0 -3 -3 v-16 c0 -6 5 -8.5 5 -11.5 z" fill="url(#g-bottle)"/> <path d="M15.2 22 q8.8 -1.2 17.6 0 v1.2 q-8.8 -1.2 -17.6 0z" fill="#fff" opacity=".35"/> <path d="M15 27 h18 v9 q-9 1.6 -18 0z" fill="url(#g-label)"/><path d="M15 27 q9 -1.4 18 0" fill="none" stroke="#c9a23c" stroke-width=".8"/> <path d="M18.5 31.3 h11" stroke="#2148a3" stroke-width="1.8" stroke-linecap="round"/><path d="M20.5 34 h7" stroke="#c8102e" stroke-width="1" stroke-linecap="round"/> <rect x="19.4" y="6.6" width="9.2" height="3.4" rx="1" fill="url(#g-cap)"/><path d="M19.4 8.3 h9.2" stroke="#6a6f78" stroke-width=".5" stroke-dasharray="1 1"/> <path d="M27 8.5 a7 7 0 0 1 9.6 1.6 l-7.6 4.4 z" fill="url(#g-lime)" stroke="#3f7a14" stroke-width=".6"/><path d="M28.3 9.3 a5.2 5.2 0 0 1 6.8 1.2 l-5.6 3.2 z" fill="#efffd0" opacity=".85"/><path d="M29.8 10.8 l3 -.5 M29.6 12 l2.6 .9" stroke="#9ad44a" stroke-width=".5"/> <path d="M18 15.5 c-1.4 3 -1.8 5.4 -1.8 8.6 v15" stroke="#fff" stroke-opacity=".75" stroke-width="1.4" fill="none" stroke-linecap="round"/><path d="M21.4 9.5 v4" stroke="#fff" stroke-opacity=".6" stroke-width="1" stroke-linecap="round"/></svg>' }
+  };
+  // Narsalar uchun gradiyentlar (hajm, yaltirash) — bir marta sahifaga qoʻshiladi
+  const ITEM_DEFS = '<linearGradient id="g-glass" x1="0" x2="1"><stop offset="0" stop-color="#cfe3f5" stop-opacity=".55"/><stop offset=".18" stop-color="#fff" stop-opacity=".85"/><stop offset=".35" stop-color="#dfefff" stop-opacity=".25"/><stop offset=".8" stop-color="#bcd4ea" stop-opacity=".2"/><stop offset="1" stop-color="#9fbcd8" stop-opacity=".6"/></linearGradient> <linearGradient id="g-whisky" x1="0" x2="1"><stop offset="0" stop-color="#7a3a08"/><stop offset=".3" stop-color="#d2801e"/><stop offset=".55" stop-color="#f2a93a"/><stop offset="1" stop-color="#8a4510"/></linearGradient> <radialGradient id="g-wtop" cx=".45" cy=".4" r=".7"><stop offset="0" stop-color="#ffd27a"/><stop offset="1" stop-color="#d98a26"/></radialGradient> <linearGradient id="g-ice" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset="1" stop-color="#cfe6f7" stop-opacity=".55"/></linearGradient> <linearGradient id="g-cigar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c58a5a"/><stop offset=".3" stop-color="#8e5530"/><stop offset=".75" stop-color="#5a2f15"/><stop offset="1" stop-color="#3a1d0c"/></linearGradient> <linearGradient id="g-band" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe08a"/><stop offset=".5" stop-color="#d9a028"/><stop offset="1" stop-color="#8a5a08"/></linearGradient> <radialGradient id="g-ember" cx=".5" cy=".5" r=".6"><stop offset="0" stop-color="#fff2b0"/><stop offset=".4" stop-color="#ff9a3c"/><stop offset=".8" stop-color="#d23a10"/><stop offset="1" stop-color="#6a2a10"/></radialGradient> <linearGradient id="g-sponge" x1="0" x2="1"><stop offset="0" stop-color="#4a200e"/><stop offset=".5" stop-color="#7a3b1c"/><stop offset="1" stop-color="#5a2812"/></linearGradient> <linearGradient id="g-side" x1="0" x2="1"><stop offset="0" stop-color="#3a180a"/><stop offset="1" stop-color="#5e2a12"/></linearGradient> <linearGradient id="g-cream" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#efdcc0"/></linearGradient> <radialGradient id="g-cherry" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#ff8a8a"/><stop offset=".35" stop-color="#e01530"/><stop offset="1" stop-color="#6a0410"/></radialGradient> <radialGradient id="g-plate" cx=".5" cy=".4" r=".6"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cfd6e2"/></radialGradient> <linearGradient id="g-bottle" x1="0" x2="1"><stop offset="0" stop-color="#a87a10"/><stop offset=".22" stop-color="#ffe08a"/><stop offset=".4" stop-color="#f0bd3a"/><stop offset=".85" stop-color="#c88a12"/><stop offset="1" stop-color="#7a5208"/></linearGradient> <linearGradient id="g-label" x1="0" x2="1"><stop offset="0" stop-color="#d9d2c0"/><stop offset=".3" stop-color="#fffdf6"/><stop offset="1" stop-color="#cfc6b0"/></linearGradient> <linearGradient id="g-cap" x1="0" x2="1"><stop offset="0" stop-color="#8a8f99"/><stop offset=".4" stop-color="#f4f6fa"/><stop offset="1" stop-color="#7a7f88"/></linearGradient> <radialGradient id="g-lime" cx=".4" cy=".4" r=".7"><stop offset="0" stop-color="#eaffc0"/><stop offset=".6" stop-color="#9ad44a"/><stop offset="1" stop-color="#4a8a18"/></radialGradient> <radialGradient id="g-shadow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#000" stop-opacity=".55"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>';
+  (function () {
+    const d = document.createElement('div');
+    d.innerHTML = '<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>' + ITEM_DEFS + '</defs></svg>';
+    document.body.appendChild(d.firstChild);
+  })();
+  function itemsHTML() {
+    const r = S.room, me = r && r.mySeat >= 0 ? r.seats[r.mySeat] : null, cur = me && me.item;
+    let h = '<h2>Oldingizga nima qoʻyasiz?</h2><p class="sub">Stoldagilarning hammasi koʻradi.</p><div class="items">';
+    Object.keys(ITEMS).forEach(function (k) {
+      h += '<button type="button" class="item' + (cur === k ? ' on' : '') + '" data-act="setitem" data-item="' + k + '" aria-pressed="' + (cur === k) + '">' +
+        '<span class="ipic">' + ITEMS[k].svg + '</span><b>' + ITEMS[k].name + '</b></button>';
+    });
+    h += '</div><div class="lobby-actions">' + (cur ? btn('setitem', 'Olib qoʻyish', 'secondary') : '') + btn('close', 'Yopish', 'primary') + '</div>';
+    return h;
+  }
+
 
   function heroHTML(load, mini) {
     return '<div class="hero' + (load && !reduceMotion ? ' load' : '') + (mini ? ' compact' : '') + '" aria-hidden="true">' +
@@ -536,7 +580,8 @@
     if (!list.length) html += '<p class="hall-empty">Hali hech kim oʻynamayapti. Birinchi stolni oching — boshqalar uni shu yerda koʻrib, qoʻshiladi.</p>';
     else html += '<p class="hall-hint">Istalgan stoldagi boʻsh oʻringa bosing — oʻsha joyga oʻtirasiz. Oʻyin ketayotgan stolni kuzatishingiz mumkin.</p>';
     html += '<div class="tables">' + sorted.map(hallCard).join('') + '</div>';
-    html += '<div class="hall-actions">' + btn('hnew', '+ Yangi stol ochish', list.length ? 'secondary wide' : 'primary wide', S.busy) + '</div>';
+    html += '<div class="hall-actions">' + btn('hnew', '+ Yangi stol ochish', list.length ? 'secondary wide' : 'primary wide', S.busy) +
+      (DEMO ? '' : effBtn()) + '</div>';
     if (inRoom && !DEMO) html += '<div class="hall-set">' + skinToggle() + '</div>';
     if (inRoom) html += readyBarHTML(S.room);
     return html + '</div>';
@@ -617,7 +662,7 @@
     const opps = seatOrder(r);
     let h = '<header class="bar"><button type="button" class="icon" data-act="menu" aria-label="Menyu">' + iconSvg('i-menu') + '</button>' +
       '<div class="title"><b>' + (r.no ? r.no + '-stol' : 'Durak') + '</b><span>' + r.round + '-oʻyin</span></div>' + micHTML('') + scoreChip(r) + '</header>';
-    h += '<section class="field">' + GUL + '<div class="opps n' + opps.length + '">' + opps.map(function (s) { return oppHTML(r, s); }).join('') + '</div>';
+    h += '<section class="field">' + GUL + T3D + '<div class="opps n' + opps.length + '">' + opps.map(function (s) { return oppHTML(r, s); }).join('') + '</div>';
     h += '<div class="board"><div class="side">' + deckHTML(g) + watchHTML(r) + '</div>' + tableCardsHTML(r) + '</div>';
     h += '<div class="event' + (S.eventFresh && !reduceMotion ? ' enter' : '') + '">' + eventHTML(r) + '</div></section>';
     h += dockHTML(r);
@@ -659,6 +704,7 @@
     if (g.phase === 'roundEnd') return '';
     if (s === g.defender) return '<span class="role def">' + (g.taking ? 'oladi' : 'himoya') + '</span>';
     if (s === g.attacker) return '<span class="role att">' + (g.passed[s] ? 'bito' : 'hujum') + '</span>';
+    if (g.throwers && g.throwers.indexOf(s) >= 0) return '<span class="role att">' + (g.passed[s] ? 'pas' : 'tashlaydi') + '</span>';
     if (g.passed[s] && g.phase === 'throw') return '<span class="role">pas</span>';
     return '';
   }
@@ -757,7 +803,7 @@
     let h = '<section class="dock">';
     if (myTurn && S.deadlineAt) h += '<div class="mytimer"><i></i></div>';
     if (me >= 0) {
-      h += '<div class="mebar' + (myTurn ? ' turn' : '') + '"><span><b>Siz</b> ' + roleOf(r, me) + '</span><span class="help">' + (g.hand ? g.hand.length + ' ta karta' : '') + '</span></div>';
+      h += '<div class="mebar' + (myTurn ? ' turn' : '') + '"><span class="mewho"><button type="button" class="seat-tap meava" data-act="items" aria-label="Oldingizga narsa qoʻyish">' + avatarHTML(r.seats[me], me, false, true) + '</button><b>Siz</b> ' + roleOf(r, me) + '</span><span class="help">' + (g.hand ? g.hand.length + ' ta karta' : '') + '</span></div>';
     } else if (!r.seats[0]) {
       h += '<div class="mebar"><span><b>Boʻsh oʻrin</b></span>' +
         '<button type="button" class="mini-btn inv" data-act="sit" data-seat="0">Oʻtirish</button></div>';
@@ -778,7 +824,7 @@
     if (g.phase === 'attack') return g.attacker === me ? 'attack' : '';
     if (g.phase !== 'defend' && g.phase !== 'throw') return '';
     if (me === g.defender) return g.phase === 'defend' && !g.taking ? 'defend' : '';
-    return 'throw';
+    return g.throwers && g.throwers.indexOf(me) >= 0 ? 'throw' : 'watch';
   }
   // Tashlash mumkin boʻlgan kartalar
   function throwable(r) {
@@ -809,7 +855,7 @@
     if (!g.hand && !r.seats[0]) return '<div class="hand spect"></div>';
     if (!g.hand) {
       const k = Math.min(g.counts[0] || 0, 12);
-      return '<div class="hand spect n' + k + '" style="--n:' + Math.max(k, 1) + '" aria-label="' + esc(r.seats[0] ? r.seats[0].name : '') + ': ' + (g.counts[0] || 0) + ' ta karta">' + repeat(backHTML(), k) + '</div>';
+      return '<div class="hand spect n' + k + '" style="--n:' + Math.max(k, 1) + '" aria-label="' + esc(r.seats[0] ? r.seats[0].name : '') + ': ' + (g.counts[0] || 0) + ' ta karta">' + Array.apply(null, Array(k)).map(function (_, i) { return backHTML().replace('class="card', 'style="--i:' + i + '" class="card'); }).join('') + '</div>';
     }
     const cards = sortHand(g.hand, g.trump);
     if (!isActor(g, r.mySeat)) S.glowOff = false;
@@ -894,6 +940,10 @@
       if (sel.length) o.btns.push({ act: 'attack', label: sel.length > 1 ? sel.length + ' ta tashlash' : 'Tashlash', kind: 'primary' });
       if (waiting && !g.passed[me] && can.length) o.btns.push({ act: 'pass', label: g.taking ? 'Pas' : 'Bito', kind: sel.length ? 'secondary' : 'primary' });
       if (!o.hint && !o.btns.length) o.hint = waiting ? 'Kutilmoqda…' : '';
+      return o;
+    }
+    if (mode === 'watch') {
+      o.hint = 'Bu yurishda faqat ' + esc(seatName(r, g.defender)) + 'ning yonidagilar tashlaydi';
       return o;
     }
     if (g.phase === 'boutEnd') { o.hint = g.taking ? esc(seatName(r, g.defender)) + ' kartalarni oladi' : 'Bito'; return o; }
@@ -1078,6 +1128,8 @@
         btn('continue', 'Davom ettirish', 'primary') + btn('restart', 'Yangidan boshlash', 'secondary') + '</div>' : ''; break;
       case 'result': body = r && r.result ? resultHTML(r) : ''; break;
       case 'create': body = createHTML(); break;
+      case 'stats': body = statsHTML(); break;
+      case 'items': body = itemsHTML(); break;
     }
     if (!body) return '';
     return '<div class="sheet-wrap' + (S.sheetAnim && !reduceMotion ? ' anim' : '') + '" data-act="backdrop"><div class="sheet" role="dialog" aria-modal="true">' +
@@ -1146,22 +1198,60 @@
     return h + '</ul>';
   }
 
+  // Oʻyinchilar samaradorligi tugmasi
+  function effBtn() {
+    return '<button type="button" class="effbtn" data-act="stats"><span class="effico" aria-hidden="true">%</span><span><b>Oʻyinchilar samaradorligi</b><small>Hamma oʻyinchilarning oʻyin tahlili</small></span></button>';
+  }
+
+  // Koʻrinish tanlovi (menyuda)
+  function viewToggle() {
+    const b = function (v, t, sub) {
+      return '<button type="button" class="mode' + (VIEW === v ? ' on' : '') + '" data-act="view" data-v="' + v + '" aria-pressed="' + (VIEW === v) + '"><span class="vico vico-' + v + '" aria-hidden="true"></span><b>' + t + '</b><small>' + sub + '</small></button>';
+    };
+    return '<div class="modes view" role="group" aria-label="Koʻrinish">' + b('2d', '2D', 'tekis') + b('3d', '3D', 'hajmli stol') + '</div>';
+  }
+
   function menuHTML(r) {
-    let h = '<div class="langrow">' + langHTML() + '</div><h2>Hisob</h2><p class="sub">' + (r.round ? r.round + '-oʻyin. Kim necha marta durak boʻldi:' : 'Oʻyin hali boshlanmadi') + '</p>' + scoreHTML(r, null);
+    // Yuqorida — bosiladigan tugmalar; pastda — oʻyin haqidagi maʼlumot
+    let h = '<div class="langrow">' + langHTML() + '</div>' + readyBarHTML(r) + '<div class="lobby-actions menu-top">';
+    if (r.group) h += btn('tohall', 'Barcha stollar (zal)', 'secondary');
+    if (r.mySeat >= 0 && !r.seats[r.mySeat].auto && r.phase !== 'lobby') h += btn('leave', 'Stoldan turish', 'danger');
+    if (r.isHost && r.phase === 'roundEnd') h += btn('lobby', 'Lobbiga qaytish (hisob 0)', 'secondary');
+    if (!DEMO) h += btn('share', 'Doʻstlarni chaqirish', 'secondary');
+    h += btn('rules', 'Qoidalar', 'secondary') + '</div>';
+    if (!DEMO) h += effBtn();
+    h += viewToggle() + (DEMO ? '' : skinToggle());
+    h += '<h2>Hisob</h2><p class="sub">' + (r.round ? r.round + '-oʻyin. Kim necha marta durak boʻldi:' : 'Oʻyin hali boshlanmadi') + '</p>' + scoreHTML(r, null);
     if (VC) {
       h += '<h3>Ovozli chat</h3><div data-vpanel>' + voicePanelHTML() + '</div>' +
         '<p class="vnote">Ovoz imkon boʻlsa toʻgʻridan-toʻgʻri, boʻlmasa server orqali uzatiladi va yozib olinmaydi. Bir-biringizni eshitish uchun hamma 🎙 tugmasini bosishi kerak. Bir xonada oʻtirgan boʻlsangiz, quloqchin taqing — aks holda ovoz qaytadi.</p>';
     }
-    if (!DEMO) h += skinToggle();
-    h += readyBarHTML(r);
-    h += '<div class="lobby-actions">';
-    if (r.group) h += btn('tohall', 'Barcha stollar (zal)', 'secondary');
-    h += btn('rules', 'Qoidalar', 'secondary');
-    if (!DEMO) h += btn('share', 'Doʻstlarni chaqirish', 'secondary');
-    if (r.mySeat >= 0 && !r.seats[r.mySeat].auto && r.phase !== 'lobby') h += btn('leave', 'Stoldan turish', 'danger');
-    if (r.isHost && r.phase === 'roundEnd') h += btn('lobby', 'Lobbiga qaytish (hisob 0)', 'secondary');
-    h += btn('close', 'Yopish', 'primary') + '</div>';
+    h += '<div class="lobby-actions">' + btn('close', 'Yopish', 'primary') + '</div>';
     return h;
+  }
+
+  // Oʻyinchilar samaradorligi (server tahlili)
+  function statsHTML() {
+    const d = S.stats;
+    let h = '<h2>Oʻyinchilar samaradorligi</h2><p class="sub">Har bir yurish tahlil qilinadi. Samaradorlik = toʻgʻri yurishlar (50%) + durak boʻlmaslik (25%) + chiqish oʻrni (25%).</p>';
+    if (!d) return h + '<p class="status">Yuklanmoqda…</p>';
+    const row = function (u, i) {
+      const lvl = u.eff >= 70 ? 'hi' : u.eff >= 50 ? 'mid' : 'lo';
+      return '<li class="eff-row' + (d.me && d.me.id === u.id ? ' me' : '') + (u.ranked ? '' : ' new') + '">' +
+        '<span class="eff-n">' + (u.ranked ? i + 1 : '·') + '</span>' +
+        '<span class="eff-who"><b>' + esc(u.name) + (d.me && d.me.id === u.id ? ' <i>(siz)</i>' : '') + '</b>' +
+        '<small>' + u.rounds + ' oʻyin · toʻgʻri yurish ' + u.acc + '% · durak ' + u.dur + '% · birinchi chiqish ' + u.first + '%</small>' +
+        '<span class="eff-bar"><span class="' + lvl + '" style="width:' + u.eff + '%"></span></span></span>' +
+        '<span class="eff-p ' + lvl + '">' + (u.ranked ? u.eff + '%' : '—') + '</span></li>';
+    };
+    if (d.me) h += '<div class="eff-me"><span>Sizning samaradorligingiz</span><b>' + (d.me.ranked ? d.me.eff + '%' : '—') + '</b>' +
+      (d.me.ranked ? '' : '<small>Reytingga kirish uchun kamida ' + d.min + ' oʻyin oʻynang</small>') + '</div>';
+    const back = '<div class="lobby-actions">' + (S.room ? btn('menu', 'Orqaga', 'secondary') : btn('close', 'Yopish', 'primary')) + '</div>';
+    if (!d.list.length) return h + '<p class="status">Hali statistika yoʻq — bir necha oʻyin oʻynang.</p>' + back;
+    let n = 0;
+    h += '<ol class="eff-list">' + d.list.map(function (u) { return row(u, u.ranked ? n++ : 0); }).join('') + '</ol>';
+    h += '<p class="note">«—» — hali ' + d.min + ' oʻyindan kam oʻynagan. Botlar hisoblanmaydi.</p>';
+    return h + back;
   }
 
   function resultHTML(r) {
@@ -1283,6 +1373,10 @@
       case 'attack': case 'beat': case 'take': case 'pass': return play(act);
       case 'tgt': return beat(Number(el.getAttribute('data-i')));
       case 'menu': return openSheet('menu');
+      case 'items': return openSheet('items');
+      case 'view': setView(el.getAttribute('data-v')); return render();
+      case 'setitem': send({ t: 'item', item: el.getAttribute('data-item') || null }); S.sheet = null; return render();
+      case 'stats': S.stats = null; send({ t: 'stats' }); return openSheet('stats');
       case 'rules': return openSheet('rules');
       case 'result': return openSheet('result');
       case 'close':

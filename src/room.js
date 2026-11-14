@@ -38,6 +38,7 @@
     this.onRoundEnd = o.onRoundEnd || function () {};
     this.onEmpty = o.onEmpty || function () {};  // stolda faol oʻyinchi qolmadi — stol yopiladi
     this.emptyMs = o.emptyMs != null ? o.emptyMs : 2500;        // hamma turib ketsa
+    this.seatFreeMs = o.seatFreeMs != null ? o.seatFreeMs : 30000; // oflayn oʻyinchining oʻrni shuncha vaqtdan keyin boʻshaydi
     this.awayMs = o.awayMs != null ? o.awayMs : 90000;          // hamma oflayn boʻlsa (ilova yopilgan)
     this.resumeMs = o.resumeMs != null ? o.resumeMs : 30000;    // davom/yangidan tanlovi — shundan keyin davom etadi
 
@@ -64,6 +65,7 @@
     this.deadline = 0;
     this.deadlineTotal = 0;
     this.botSeq = 0;
+    this.stats = o.stats || null; // samaradorlik statistikasi (server)
     this.joinSeq = 0;       // stolga oʻtirish tartibi (stol egasi ketsa — keyingi kelgan egasi boʻladi)
     this.kickedOut = null;  // { at, id } — stol egasi chiqargan oʻyinchi
     this.resumeAsk = false;   // oʻyin oʻrtasida boʻshagan oʻrin toʻldi: stol egasi davom ettirish yoki yangidan boshlashni tanlaydi
@@ -121,6 +123,17 @@
       seq: ++this.evSeq,
       also: list.filter(function (e) { return e !== top && (e.kind === 'out' || e.kind === 'start' || e.kind === 'take'); })
     });
+  };
+
+  // Oʻyinchi oʻz oldiga qoʻyadigan narsa (poker stolidagidek): viski, sigara, tort, pivo
+  const ITEMS = ['whisky', 'cigar', 'cake', 'beer'];
+  P.setItem = function (uid, item) {
+    const i = this.seatOf(uid);
+    if (i < 0) return 'Avval stolga oʻtiring';
+    if (item != null && ITEMS.indexOf(item) < 0) return 'Bunday narsa yoʻq';
+    this.seats[i].item = item || null;
+    this.changed();
+    return null;
   };
 
   P.fixHost = function () {
@@ -183,16 +196,17 @@
     this.checkAutoStart();
   };
 
-  // Lobbida uzoq vaqt oflayn boʻlganlarni chiqarish
+  // 30 soniyadan ortiq oflayn boʻlgan oʻyinchining oʻrni boʻshatiladi — har qanday holatda
+  // (lobbi, oʻyin, oʻyin oxiri). Oʻyin paytida boʻshasa, oʻyin toʻxtaydi: boʻsh joyga
+  // kimdir oʻtirishi yoki bot qoʻshilishi kerak. Qaytib kelsa — mehmon boʻladi.
   P.sweep = function () {
-    if (this.phase !== 'lobby') return false;
     const now = this.now();
     let ch = false;
     for (let i = 0; i < this.size; i++) {
       const s = this.seats[i];
-      if (s && !s.bot && !this.isOnline(s.id) && s.offlineSince && now - s.offlineSince >= 30000) { this.seats[i] = null; ch = true; }
+      if (s && !s.bot && !this.isOnline(s.id) && s.offlineSince && now - s.offlineSince >= this.seatFreeMs) { this.seats[i] = null; ch = true; }
     }
-    if (ch) { this.fixHost(); this.clearLobbyTimer(); this.changed(); }
+    if (ch) { this.fixHost(); this.clearLobbyTimer(); this.cancelResume(); this.reschedule(); this.changed(); }
     return ch;
   };
 
@@ -215,6 +229,7 @@
       case 'kick': return this.kick(uid, m.seat);
       case 'start': return this.start(uid);
       case 'ready': return this.setReady(uid);
+      case 'item': return this.setItem(uid, m.item);
       case 'act': return this.act(uid, m.action);
       case 'next': return this.nextRound(uid);
       case 'lobby': return this.backToLobby(uid);
@@ -482,8 +497,12 @@
       cards: Array.isArray(action.cards) ? action.cards.slice(0, 6).map(String) : [],
       on: Number.isInteger(action.on) ? action.on : undefined
     };
+    const g0 = this.game;
+    const pre = this.stats ? { phase: g0.phase, trump: g0.trump, stock: g0.stock.length, defender: g0.defender,
+      table: g0.table.map(function (x) { return { a: x.a, d: x.d }; }), hands: g0.hands.map(function (h) { return h.slice(); }) } : null;
     const res = E.act(this.game, i, a);
     if (!res.ok) return res.error;
+    if (pre) this.stats.check(pre, i, a, false, this.seats[i]);
     const s = this.seats[i];
     if (s.auto) { s.auto = false; this.fixHost(); }
     this.setEvents(res.events);
@@ -499,6 +518,14 @@
       this.score[r.seat]++;
       this.lastDurak = r.seat;
     } else this.lastDurak = -1;
+    if (this.stats) {
+      const places = this.game.places;
+      for (let k = 0; k < this.size; k++) {
+        const s = this.seats[k];
+        if (!s || s.bot) continue;
+        this.stats.round(s, { durak: r.type === 'durak' && r.seat === k, draw: r.type === 'draw', place: places.indexOf(k) + 1, n: this.size });
+      }
+    }
     this.phase = 'roundEnd';
     this.lastResult = Object.assign({}, E.resultView(this.game), {
       round: this.round,
@@ -590,7 +617,9 @@
       // vaqt tugasa — chap tarafdagi kartalar; bot va chiqib ketganlar oʻrniga — kompyuter oʻyinchisi
       const a = (kind === 'timeout' && E.autoMove(g, seatIdx)) || E.AI.choose(g, seatIdx);
       if (a) {
+        const who = this.seats[seatIdx];
         const r = E.act(g, seatIdx, a);
+        if (r.ok && this.stats && who && !who.bot && kind === 'timeout') this.stats.check(null, seatIdx, a, true, who);
         if (r.ok) {
           if (kind === 'timeout' && r.events.length) r.events[0] = Object.assign({}, r.events[0], { auto: true });
           this.setEvents(r.events);
@@ -638,7 +667,8 @@
           online: s.bot || self.isOnline(s.id),
           host: s.id === self.hostId,
           you: s.id === uid,
-          ready: !!(s.bot || s.ready)
+          ready: !!(s.bot || s.ready),
+          item: s.item || null
         };
       }),
       readyIn: this.readyAt ? Math.max(0, this.readyAt - this.now()) : 0,

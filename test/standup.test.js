@@ -202,3 +202,29 @@ test('stol egasi ketsa — undan keyin kirgan oʻyinchi egasi boʻladi', () => {
   r.leave(order[1]);
   assert.equal(r.hostId, order[2]);
 });
+
+test('oʻyinchi oldiga narsa qoʻyadi (viski/sigara/tort/pivo), hamma koʻradi', () => {
+  const { r } = setup(4);
+  const i = r.seats.findIndex((s) => s && s.id === 'u2');
+  assert.equal(r.dispatch('u2', { t: 'item', item: 'whisky' }), null);
+  assert.equal(r.snapshot('u3').seats[i].item, 'whisky');
+  assert.equal(r.dispatch('u2', { t: 'item', item: 'vodka' }), 'Bunday narsa yoʻq');
+  assert.equal(r.dispatch('u2', { t: 'item', item: null }), null);
+  assert.equal(r.snapshot('u1').seats[i].item, null);
+  r.connect({ id: 'w', name: 'W' });
+  assert.equal(r.dispatch('w', { t: 'item', item: 'cake' }), 'Avval stolga oʻtiring');
+});
+
+test('oʻyin paytida 30 soniya oflayn qolgan oʻyinchining oʻrni boʻshaydi, qaytsa — mehmon', () => {
+  const { r, c } = setup(4);
+  assert.equal(r.phase, 'playing');
+  const i = r.seats.findIndex((s) => s && s.id === 'u3');
+  r.disconnect('u3');
+  c.advance(20000); r.sweep();
+  assert.ok(r.seats[i], '20 soniyada hali joyida');
+  c.advance(11000); r.sweep();
+  assert.equal(r.seats[i], null);
+  assert.equal(r.snapshot('u1').paused, true);
+  r.connect({ id: 'u3', name: 'U3' });
+  assert.equal(r.snapshot('u3').mySeat, -1);
+});
