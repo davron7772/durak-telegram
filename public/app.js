@@ -180,7 +180,8 @@
 
   // Demo: hammasi brauzerda, kompyuter oʻyinchilari bilan
   let localRoom = null;
-  function connectLocal() {
+  // full — hamma boʻsh oʻringa bot (demoda yangi stol); aks holda Bura'dagidek lobbi: bitta oʻrin boʻsh qoladi
+  function connectLocal(full) {
     const me = { id: 'me', name: 'Siz' };
     let pushT = null;
     if (localRoom) { try { localRoom.destroy(); } catch (e) { /* */ } }
@@ -199,7 +200,8 @@
       }
     };
     room.connect(me);
-    room.fillBots('me');
+    if (full) room.fillBots('me');
+    else for (let i = 0; i < room.size - 2; i++) room.addBot('me');
   }
 
   function setConn(c) {
@@ -645,6 +647,10 @@
     if (canManage(r) && need > 0) h += btn('fillBots', need === 1 ? 'Boʻsh oʻringa bot qoʻshish' : 'Qolgan ' + need + ' oʻringa bot qoʻshish', DEMO ? 'primary' : 'secondary', S.busy);
     if (r.mySeat < 0 && need === 0) h += '<p class="note">Stol toʻla. Siz tomosha qilyapsiz.</p>';
     h += '</div>';
+    if (r.isHost) {
+      h += '<label class="toggle"><input type="checkbox" data-act="helper"' + (r.settings.helper ? ' checked' : '') + '>' +
+        '<span><b>Karta yordamchisi</b><small>Urish va tashlash mumkin boʻlgan kartalarni ajratib koʻrsatadi</small></span></label>';
+    }
     if (!DEMO) h += skinToggle();
     if (DEMO) h += '<p class="demo-note">Demo: raqiblar — kompyuter. Telegramʼda stolga doʻstlaringiz oʻtiradi.</p>';
     h += '<nav class="links">' + linkBtn('create', 'Yangi stol') + linkBtn('rules', 'Qoidalar') + (r.mySeat >= 0 && !DEMO ? linkBtn('leave', 'Stoldan turish') : '') + '</nav></div>';
@@ -867,7 +873,7 @@
     return '<div class="hand n' + cards.length + myTurn + '" style="--n:' + Math.max(cards.length, 1) + '" role="group" aria-label="Qoʻlingizdagi kartalar">' + cards.map(function (c, i) {
       const sel = S.selected.indexOf(c) >= 0;
       const fresh = !S.seenHand.has(r.round + ':' + c) && !reduceMotion;
-      const dim = ok && ok.indexOf(c) < 0;
+      const dim = ok && r.settings && r.settings.helper !== false && ok.indexOf(c) < 0;
       return cardHTML(c, { tag: 'button', cls: (sel ? 'sel' : '') + (fresh ? ' enter' : '') + (dim ? ' dim' : ''), attrs: ' data-act="card" aria-pressed="' + sel + '" style="--i:' + i + '"' });
     }).join('') + '</div>';
   }
@@ -1415,7 +1421,7 @@
         if (DEMO) {
           // Demo: yangi stol shu yerning oʻzida — tanlangan son bilan, boʻsh oʻrinlarda botlar
           S.selected = []; S.resultClosedFor = 0; S.event = null;
-          connectLocal();
+          connectLocal(true);
           toast(S.newSize + ' kishilik yangi stol ochildi');
           return;
         }

@@ -76,6 +76,8 @@
   // Doimiy matnlar va boʻlaklar
   const D = {
     // ---- Durak ----
+    'Karta yordamchisi': 'Помощник по картам',
+    'Urish va tashlash mumkin boʻlgan kartalarni ajratib koʻrsatadi': 'Выделяет карты, которыми можно отбиться или подкинуть',
     '+ Yangi stol ochish': '+ Открыть новый стол',
     'Yangi stol': 'Новый стол',
     'Stolni ochish': 'Открыть стол',
