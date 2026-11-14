@@ -76,6 +76,8 @@
   // Doimiy matnlar va boʻlaklar
   const D = {
     // ---- Durak ----
+    'Istalgan stoldagi boʻsh oʻringa bosing — oʻsha joyga oʻtirasiz. Oʻyin ketayotgan stolni kuzatishingiz mumkin.': 'Нажмите на свободное место за любым столом — сядете туда. За идущей игрой можно наблюдать.',
+    'Boʻsh oʻrin': 'Свободное место',
     'Karta yordamchisi': 'Помощник по картам',
     'Urish va tashlash mumkin boʻlgan kartalarni ajratib koʻrsatadi': 'Выделяет карты, которыми можно отбиться или подкинуть',
     '+ Yangi stol ochish': '+ Открыть новый стол',
