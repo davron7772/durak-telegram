@@ -179,14 +179,16 @@
   }
 
   // Demo: hammasi brauzerda, kompyuter oʻyinchilari bilan
+  let localRoom = null;
   function connectLocal() {
     const me = { id: 'me', name: 'Siz' };
     let pushT = null;
-    const room = new window.DurakRoom.Room({
+    if (localRoom) { try { localRoom.destroy(); } catch (e) { /* */ } }
+    const room = localRoom = new window.DurakRoom.Room({
       id: 'demo', turnSeconds: 60, botDelay: [650, 1100], size: S.newSize,
       onChange: function () {
         if (pushT) return;
-        pushT = setTimeout(function () { pushT = null; onMessage({ t: 'state', room: room.snapshot('me'), invite: '' }); }, 0);
+        pushT = setTimeout(function () { pushT = null; if (room === localRoom) onMessage({ t: 'state', room: room.snapshot('me'), invite: '' }); }, 0);
       }
     });
     T = {
@@ -645,7 +647,7 @@
     h += '</div>';
     if (!DEMO) h += skinToggle();
     if (DEMO) h += '<p class="demo-note">Demo: raqiblar — kompyuter. Telegramʼda stolga doʻstlaringiz oʻtiradi.</p>';
-    h += '<nav class="links">' + linkBtn('rules', 'Qoidalar') + (r.mySeat >= 0 && !DEMO ? linkBtn('leave', 'Stoldan turish') : '') + '</nav></div>';
+    h += '<nav class="links">' + linkBtn('create', 'Yangi stol') + linkBtn('rules', 'Qoidalar') + (r.mySeat >= 0 && !DEMO ? linkBtn('leave', 'Stoldan turish') : '') + '</nav></div>';
     return h;
   }
 
@@ -1173,9 +1175,11 @@
     };
     return '<h2>Yangi stol</h2><p class="sub">Necha kishi oʻynaydi?</p><div class="modes n5" role="group" aria-label="Oʻyinchilar soni">' +
       [2, 3, 4, 5, 6].map(mode).join('') + '</div>' +
+      (DEMO ? '<div class="choices">' + choiceHTML('new-bots', 'i-bot', 'Stolni ochish', 'Demo: siz va ' + (n - 1) + ' ta bot. Oʻyin darhol boshlanadi.') + '</div>' :
+      (S.room && S.room.mySeat >= 0 && S.room.phase !== 'lobby' ? '<p class="note">Yangi stol ochsangiz, hozirgi stoldan turasiz — oʻrningizga bot oʻtiradi.</p>' : '') +
       '<p class="sub">Kim bilan oʻynaysiz?</p><div class="choices">' +
       choiceHTML('new-friends', 'i-users', 'Doʻstlar bilan', 'Stol botsiz ochiladi. Doʻstlaringizni taklif qiling, kerak boʻlsa — bot qoʻshing. Oʻyin ' + n + ' kishi toʻlganda boshlanadi.') +
-      choiceHTML('new-bots', 'i-bot', 'Botlar bilan', 'Boʻsh oʻrinlarga botlar oʻtiradi — oʻyin darhol boshlanadi.', 'alt') + '</div>';
+      choiceHTML('new-bots', 'i-bot', 'Botlar bilan', 'Boʻsh oʻrinlarga botlar oʻtiradi — oʻyin darhol boshlanadi.', 'alt') + '</div>');
   }
 
   // Hisob: kim necha marta durak boʻldi (va oxirgi oʻyinda chiqish tartibi)
@@ -1213,7 +1217,7 @@
 
   function menuHTML(r) {
     // Yuqorida — bosiladigan tugmalar; pastda — oʻyin haqidagi maʼlumot
-    let h = '<div class="langrow">' + langHTML() + '</div>' + readyBarHTML(r) + '<div class="lobby-actions menu-top">';
+    let h = '<div class="langrow">' + langHTML() + '</div>' + readyBarHTML(r) + '<div class="lobby-actions menu-top">' + btn('create', '+ Yangi stol ochish', 'primary');
     if (r.group) h += btn('tohall', 'Barcha stollar (zal)', 'secondary');
     if (r.mySeat >= 0 && !r.seats[r.mySeat].auto && r.phase !== 'lobby') h += btn('leave', 'Stoldan turish', 'danger');
     if (r.isHost && r.phase === 'roundEnd') h += btn('lobby', 'Lobbiga qaytish (hisob 0)', 'secondary');
@@ -1270,7 +1274,8 @@
     let h = '<h2 class="big">' + title + '</h2><p class="sub">' + sub + '</p>' + scoreHTML(r, res);
     h += '<div class="btns">';
     const me = r.mySeat;
-    if (r.isHost) h += btn('lobby', 'Lobbiga', 'secondary');
+    if (r.isHost && !DEMO) h += btn('lobby', 'Lobbiga', 'secondary');
+    else h += btn('create', 'Yangi stol', 'secondary');
     if (me >= 0 && !r.seats[me].auto) h += btn('next', 'Yana oʻynash', 'primary');
     else if (me < 0 && r.seats.some(function (s) { return s && (s.bot || s.auto); })) h += btn('sit', 'Bot oʻrniga oʻtirish', 'primary');
     else h += btn('close', 'Yopish', 'secondary');
@@ -1407,6 +1412,13 @@
       case 'create': case 'hnew': return openSheet('create');
       case 'new-friends': case 'new-bots':
         S.sheet = null;
+        if (DEMO) {
+          // Demo: yangi stol shu yerning oʻzida — tanlangan son bilan, boʻsh oʻrinlarda botlar
+          S.selected = []; S.resultClosedFor = 0; S.event = null;
+          connectLocal();
+          toast(S.newSize + ' kishilik yangi stol ochildi');
+          return;
+        }
         render();
         return send({ t: 'create', bots: act === 'new-bots', size: S.newSize }, true);
       case 'newsize':

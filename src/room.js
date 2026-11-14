@@ -360,6 +360,20 @@
     return null;
   };
 
+  // Oʻyinchi boshqa stolga ketdi (yangi stol ochdi): oʻyin ketayotgan boʻlsa — oʻrniga bot oʻtiradi,
+  // qolganlar toʻxtamasdan davom etadi. Lobbida — oʻrin shunchaki boʻshaydi.
+  P.handToBot = function (uid) {
+    const i = this.seatOf(uid);
+    if (i < 0) return null;
+    if (this.phase === 'lobby') return this.leave(uid);
+    this.seats[i] = this.makeBot();
+    this.spectators.delete(uid);
+    this.fixHost();
+    this.reschedule();
+    this.changed();
+    return null;
+  };
+
   P.fillBots = function (uid) {
     if (!this.canManage(uid)) return 'Bot qoʻshish uchun stolda oʻtirgan boʻlishingiz kerak';
     if (this.firstFree() < 0) return 'Boʻsh oʻrin yoʻq';

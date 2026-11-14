@@ -17,6 +17,8 @@
 
   // Oʻzgaruvchan matnlar (raqam bilan) — avval shular
   const RULES = [
+    [/(\d+) kishilik yangi stol ochildi/g, (m, n) => 'Открыт новый стол на ' + n + ' ' + pl(n, 'игрока', 'игроков', 'игроков')],
+    [/Demo: siz va (\d+) ta bot\. Oʻyin darhol boshlanadi\./g, (m, n) => 'Демо: вы и ' + n + ' ' + pl(n, 'бот', 'бота', 'ботов') + '. Игра начнётся сразу.'],
     [/(\d+) oʻyin · toʻgʻri yurish (\d+)% · durak (\d+)% · birinchi chiqish (\d+)%/g, (m, a, b, c, d) => a + ' ' + pl(a, 'партия', 'партии', 'партий') + ' · верные ходы ' + b + '% · дурак ' + c + '% · вышел первым ' + d + '%'],
     [/Reytingga kirish uchun kamida (\d+) oʻyin oʻynang/g, (m, n) => 'Чтобы попасть в рейтинг, сыграйте минимум ' + n + ' ' + pl(n, 'партию', 'партии', 'партий')],
     [/«—» — hali (\d+) oʻyindan kam oʻynagan\. Botlar hisoblanmaydi\./g, (m, n) => '«—» — сыграно меньше ' + n + ' партий. Боты не учитываются.'],
@@ -74,6 +76,10 @@
   // Doimiy matnlar va boʻlaklar
   const D = {
     // ---- Durak ----
+    '+ Yangi stol ochish': '+ Открыть новый стол',
+    'Yangi stol': 'Новый стол',
+    'Stolni ochish': 'Открыть стол',
+    'Yangi stol ochsangiz, hozirgi stoldan turasiz — oʻrningizga bot oʻtiradi.': 'Если откроете новый стол, вы встанете из-за текущего — ваше место займёт бот.',
     'Oʻyinchilar samaradorligi': 'Эффективность игроков',
     'Hamma oʻyinchilarning oʻyin tahlili': 'Разбор игры всех игроков',
     'Har bir yurish tahlil qilinadi. Samaradorlik = toʻgʻri yurishlar (50%) + durak boʻlmaslik (25%) + chiqish oʻrni (25%).': 'Каждый ход анализируется. Эффективность = верные ходы (50%) + не остаться дураком (25%) + место выхода (25%).',

@@ -228,3 +228,13 @@ test('oʻyin paytida 30 soniya oflayn qolgan oʻyinchining oʻrni boʻshaydi, qa
   r.connect({ id: 'u3', name: 'U3' });
   assert.equal(r.snapshot('u3').mySeat, -1);
 });
+
+test('oʻyin paytida yangi stolga ketgan oʻyinchi oʻrniga bot oʻtiradi, oʻyin toʻxtamaydi', () => {
+  const { r } = setup(4);
+  assert.equal(r.phase, 'playing');
+  const i = r.seats.findIndex((s) => s && s.id === 'u2');
+  assert.equal(r.handToBot('u2'), null);
+  assert.ok(r.seats[i].bot, 'bot oʻtirdi');
+  assert.equal(r.snapshot('u1').paused, false);
+  assert.equal(r.seatOf('u2'), -1);
+});

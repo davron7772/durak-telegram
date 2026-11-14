@@ -484,6 +484,13 @@ class Hub {
     if (this.hallTables(g).length >= this.hallMax(g)) return this.send(c, { t: 'error', msg: 'Zalda stollar toʻla' });
     g.lastCreate.set(c.user.id, now);
     const room = this.createRoom({ group: true, chatId: g.chatId, title: g.title, size: Room.clampSize(m && m.size) });
+    // eski stolda oʻyin ketayotgan boʻlsa — oʻrniga bot (boshqa qurilmada ham shu stolda boʻlmasa)
+    const old = c.room;
+    if (old && old.phase !== 'lobby' && old.seatOf(c.user.id) >= 0) {
+      let others = 0;
+      for (const o of this.conns.get(old.id) || []) if (o !== c && o.user && o.user.id === c.user.id) others++;
+      if (!others) old.handToBot(c.user.id);
+    }
     this.leaveRoomFor(c);
     this.enter(c, room);
     if (bots) room.fillBots(c.user.id); // stol toʻla — guruhni chaqirishning keragi yoʻq
